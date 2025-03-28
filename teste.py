@@ -1,10 +1,14 @@
 # Import necessary libraries
 import pygame
+from pygame.locals import *
 import sys
 import random
 import math
 import os
 import time
+import pymunk
+from pymunk.pygame_util import *
+from pymunk import Vec2d
  
 # Initialize Pygame
 pygame.init()
@@ -38,6 +42,7 @@ class Bird(pygame.sprite.Sprite):
         self.dragging = False
         self.drag_start_pos = (0, 0)
         self.clock_start = 0
+        self.dragging_stop = False
 
     def update(self):
         if self.dragging:
@@ -45,8 +50,9 @@ class Bird(pygame.sprite.Sprite):
             self.rect.centerx = mouse_pos[0]
             self.rect.centery = mouse_pos[1]
         else:
-            self.rect.x += self.velocity[0]
-            self.rect.y += self.velocity[1]
+            if self.dragging_stop:
+                self.rect.x += self.velocity[0]
+                self.rect.y += self.velocity[1] * (time.time() - self.clock_start) + (time.time() - self.clock_start) ** 2
  
     def start_drag(self):
         self.dragging = True
@@ -54,10 +60,11 @@ class Bird(pygame.sprite.Sprite):
  
     def end_drag(self):
         self.dragging = False
+        self.dragging_stop = True
         self.clock_start = time.time()
         mouse_pos = pygame.mouse.get_pos()
         direction = math.atan2(self.drag_start_pos[1] - mouse_pos[1], self.drag_start_pos[0] - mouse_pos[0])
-        speed = 10
+        speed = 5
         self.velocity = [speed * math.cos(direction), speed * math.sin(direction)]
  
     def hit_enemy(self):
@@ -127,6 +134,7 @@ while True:
  
             elif refresh_button.rect.collidepoint(event.pos):
                 # Refresh button clicked - reset game
+                player_bird.dragging_stop = False
                 player_bird.rect.center = (100, SCREEN_HEIGHT // 2)  # Reset player bird position
                 player_bird.velocity = [0, 0]
  
@@ -173,6 +181,7 @@ while True:
     # Reset player bird to origin position if it goes out of the screen
     if player_bird.rect.left > SCREEN_WIDTH or player_bird.rect.right < 0 or \
             player_bird.rect.top > SCREEN_HEIGHT or player_bird.rect.bottom < 0:
+        player_bird.dragging_stop = False
         player_bird.rect.center = (100, SCREEN_HEIGHT // 2)
         player_bird.velocity = [0, 0]
  
@@ -216,6 +225,7 @@ while True:
         screen.blit(game_over_text, text_rect)
         game_over = True  # Update the game_over flag
  
+    print(time.time() - player_bird.clock_start)
     pygame.display.flip()
     clock.tick(60)
  
